@@ -1,0 +1,20 @@
+{
+  "code": 200,
+  "data": {
+    "description": "",
+    "html": "<html><head><meta name=\"color-scheme\" content=\"light dark\"></head><body><pre style=\"word-wrap: break-word; white-space: pre-wrap;\"># Roadmap\n\nCurrent state (v0.1.x): strace-based stdio probing, manifest hashing for\nrug-pull detection, basic remote transports (manifest-only).\n\n## Near-term (next minor)\n\n- **Schema-coverage input synthesis** — drop in `hypothesis-jsonschema` and\n  call each tool N times with diverse inputs, not once with a canary value.\n  Catches servers that misbehave only on specific input shapes.\n- **AF_UNIX egress detection** — currently a server exfiltrating over a unix\n  domain socket slips past `analyze.py`. Add the matching socket family.\n- **Allowlist mode** — let users declare expected files/hosts in a config\n  file; only deviations from the allowlist surface as findings. Turns\n  `mcp-behave` from \"spike\" into \"policy enforcement gate.\"\n\n## Mid-term (the moat)\n\n- **eBPF/seccomp backend** — the strace dependency is the project's biggest\n  limitation: Linux-only, requires `SYS_PTRACE`, single-host. An eBPF-based\n  syscall capture (e.g. via `bcc`, `bpftrace`, or a Rust agent using `aya`)\n  would: (a) run on macOS via Lima/Colima or a kernel-mode equivalent,\n  (b) capture more accurately at higher concurrency, (c) eventually let us\n  attach to *already-running* MCP servers rather than spawning them. This is\n  weeks of work and a separate binary, not a flag — but it's what turns this\n  from a developer toy into something a CI pipeline at a real company runs\n  on every PR.\n- **Full HTTP/SSE behavior verification** — for remote servers we currently\n  only collect the declared surface. With an eBPF agent running on the host\n  *where the server lives*, behavioral verification becomes possible.\n- **Per-tool taxonomy & policy** — instead of one global allowlist, classify\n  tools by purpose (read-local, fetch-remote, mutate-fs, exec-process) and\n  apply per-class expectations.\n\n## Why these, in this order\n\nThe Phase 0 spike (now shipped as 0.1.0) proved the technical premise: you\n*can* get accurate behavioral ground truth from an MCP server. The roadmap\nabove ranks improvements by leverage:\n\n1. **Input synthesis** is the cheapest way to find more bugs in the same servers.\n2. **AF_UNIX** closes a real evasion gap.\n3. **Allowlist mode** is what makes this a product, not a one-off audit.\n4. **eBPF** is the platform bet — expensive, but it's the only path to\n   \"watches MCP servers everywhere your agent runs them.\"\n\neBPF is intentionally not v0.x scope. Shipping a half-baked eBPF probe would\npoison the project's reputation faster than not having one.\n</pre></body></html>",
+    "httpStatus": 200,
+    "httpStatusText": "",
+    "title": "",
+    "url": "https://raw.githubusercontent.com/navid72m/mcp-behave/main/ROADMAP.md",
+    "usage": {
+      "tokens": 655
+    }
+  },
+  "meta": {
+    "usage": {
+      "tokens": 655
+    }
+  },
+  "status": 20000
+}
