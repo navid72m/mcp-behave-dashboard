@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { db } from '@/lib/db'
 import { hashToken } from '@/lib/tokens'
+import { RATE_LIMIT, checkAuditRateLimit } from '@/lib/ratelimit'
 
 const FindingInput = z.object({
   type: z.string().min(1).max(64),
@@ -54,6 +55,25 @@ async function authenticate(req: Request): Promise<{ userId: string; tokenId: st
 export async function POST(req: Request) {
   const auth = await authenticate(req)
   if (!auth) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+
+  const rl = await checkAuditRateLimit(auth.tokenId)
+  if (!rl.ok) {
+    return NextResponse.json(
+      {
+        error: 'rate_limit_exceeded',
+        message: `Max ${RATE_LIMIT} requests per minute per token. Retry in ${rl.retryAfterSec}s.`,
+      },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(rl.retryAfterSec),
+          'X-RateLimit-Limit': String(RATE_LIMIT),
+          'X-RateLimit-Remaining': '0',
+          'X-RateLimit-Reset': String(Math.floor(rl.resetAt.getTime() / 1000)),
+        },
+      },
+    )
+  }
 
   const json = await req.json().catch(() => null)
   if (!json) return NextResponse.json({ error: 'invalid json' }, { status: 400 })
@@ -118,11 +138,6 @@ export async function POST(req: Request) {
       },
     },
     select: { id: true, createdAt: true },
-  })
-
-  await db.apiToken.update({
-    where: { id: auth.tokenId },
-    data: { lastUsedAt: new Date() },
   })
 
   return NextResponse.json(
