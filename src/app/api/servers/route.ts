@@ -32,7 +32,12 @@ export async function GET(request: Request) {
       audits: {
         orderBy: { createdAt: 'desc' },
         take: 1,
-        include: { findings: true },
+        include: {
+          findings: true,
+          submittedBy: {
+            select: { login: true, name: true, image: true },
+          },
+        },
       },
       tools: true,
     },
@@ -62,6 +67,13 @@ export async function GET(request: Request) {
             exitCode: latestAudit.exitCode,
             createdAt: latestAudit.createdAt,
             manifestHash: latestAudit.manifestHash,
+            submittedBy: latestAudit.submittedBy
+              ? {
+                  login: latestAudit.submittedBy.login,
+                  name: latestAudit.submittedBy.name,
+                  image: latestAudit.submittedBy.image,
+                }
+              : null,
           }
         : null,
       highFindings: highFindings.length,

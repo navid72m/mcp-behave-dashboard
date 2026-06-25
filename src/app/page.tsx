@@ -47,6 +47,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useSession, signIn, signOut } from "next-auth/react";
+import Link from "next/link";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -66,6 +68,12 @@ interface Tool {
   description: string;
 }
 
+interface SubmittedBy {
+  login: string;
+  name: string | null;
+  image: string | null;
+}
+
 interface Audit {
   id: string;
   version: string;
@@ -73,6 +81,7 @@ interface Audit {
   exitCode: number;
   createdAt: string;
   manifestHash: string;
+  submittedBy: SubmittedBy | null;
 }
 
 interface Server {
@@ -138,6 +147,95 @@ const categoryLabels: Record<string, string> = {
   database: "Database",
   other: "Other",
 };
+
+function HeaderAuth() {
+  const { data: session, status } = useSession();
+  if (status === "loading") return null;
+  const user = session?.user as
+    | { name?: string | null; image?: string | null; login?: string }
+    | undefined;
+  if (!user) {
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-8 text-xs"
+        onClick={() => signIn("github")}
+      >
+        <Github className="w-3.5 h-3.5 mr-1.5" />
+        Sign in
+      </Button>
+    );
+  }
+  return (
+    <div className="flex items-center gap-2">
+      <Link
+        href="/settings"
+        className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+      >
+        {user.image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={user.image}
+            alt=""
+            className="w-6 h-6 rounded-full"
+          />
+        ) : (
+          <Github className="w-4 h-4" />
+        )}
+        <span className="hidden sm:inline">@{user.login}</span>
+      </Link>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-7 px-2 text-[11px] text-muted-foreground"
+        onClick={() => signOut()}
+      >
+        Sign out
+      </Button>
+    </div>
+  );
+}
+
+function SubmitterChip({
+  submittedBy,
+  size = "sm",
+}: {
+  submittedBy: SubmittedBy | null;
+  size?: "sm" | "md";
+}) {
+  const avatarSize = size === "md" ? "w-5 h-5" : "w-4 h-4";
+  const textSize = size === "md" ? "text-xs" : "text-[10px]";
+  if (!submittedBy) {
+    return (
+      <span className={`inline-flex items-center gap-1 ${textSize} text-muted-foreground`}>
+        <Shield className={avatarSize} />
+        from seed
+      </span>
+    );
+  }
+  return (
+    <a
+      href={`https://github.com/${submittedBy.login}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={(e) => e.stopPropagation()}
+      className={`inline-flex items-center gap-1.5 ${textSize} text-muted-foreground hover:text-foreground transition-colors`}
+    >
+      {submittedBy.image ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={submittedBy.image}
+          alt=""
+          className={`${avatarSize} rounded-full`}
+        />
+      ) : (
+        <Github className={avatarSize} />
+      )}
+      <span>by @{submittedBy.login}</span>
+    </a>
+  );
+}
 
 function typeLabel(type: string) {
   const map: Record<string, string> = {
@@ -269,6 +367,11 @@ function ServerCard({
             <Terminal className="w-3 h-3" /> {server.transport}
           </span>
         </div>
+        {server.latestAudit && (
+          <div className="pt-0.5">
+            <SubmitterChip submittedBy={server.latestAudit.submittedBy} />
+          </div>
+        )}
         {server.totalFindings > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {server.findings.slice(0, 3).map((f) => {
@@ -334,6 +437,14 @@ function ServerDetailDialog({
           <p className="text-sm text-muted-foreground mt-1">
             {server.description}
           </p>
+          {server.latestAudit && (
+            <div className="pt-1">
+              <SubmitterChip
+                submittedBy={server.latestAudit.submittedBy}
+                size="md"
+              />
+            </div>
+          )}
         </DialogHeader>
 
         <Tabs defaultValue="findings" className="mt-2">
@@ -646,16 +757,19 @@ export default function Dashboard() {
               registry
             </Badge>
           </div>
-          <a
-            href="https://github.com/navid72m/mcp-behave"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <Github className="w-4 h-4" />
-            <span className="hidden sm:inline">GitHub</span>
-            <ArrowUpRight className="w-3 h-3" />
-          </a>
+          <div className="flex items-center gap-3">
+            <a
+              href="https://github.com/navid72m/mcp-behave"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Github className="w-4 h-4" />
+              <span className="hidden sm:inline">GitHub</span>
+              <ArrowUpRight className="w-3 h-3" />
+            </a>
+            <HeaderAuth />
+          </div>
         </div>
       </header>
 
