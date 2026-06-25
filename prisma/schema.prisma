@@ -25,24 +25,26 @@ model McpServer {
 }
 
 model Audit {
-  id          String   @id @default(cuid())
-  serverId    String
-  version     String   @default("0.1.0")
-  status      String   @default("clean") // clean, findings, error
-  exitCode    Int      @default(0)
-  manifestHash String?
-  auditLog    String?  @default("")
-  createdAt   DateTime @default(now())
+  id            String   @id @default(cuid())
+  serverId      String
+  version       String   @default("0.1.0")
+  status        String   @default("clean")
+  exitCode      Int      @default(0)
+  manifestHash  String?
+  auditLog      String?  @default("")
+  submittedById String?
+  createdAt     DateTime @default(now())
 
-  server   McpServer  @relation(fields: [serverId], references: [id])
-  findings Finding[]
+  server      McpServer @relation(fields: [serverId], references: [id])
+  findings    Finding[]
+  submittedBy User?     @relation(fields: [submittedById], references: [id])
 }
 
 model Finding {
   id          String   @id @default(cuid())
   auditId     String
-  type        String   // network_egress, sensitive_file_read, rug_pull
-  severity    String   @default("high") // info, high
+  type        String
+  severity    String   @default("high")
   description String
   detail      String?  @default("")
   toolName    String?
@@ -60,4 +62,28 @@ model ToolManifest {
   createdAt   DateTime @default(now())
 
   server McpServer @relation(fields: [serverId], references: [id])
+}
+
+model User {
+  id        String   @id @default(cuid())
+  githubId  String   @unique
+  login     String   @unique
+  name      String?
+  email     String?
+  image     String?
+  createdAt DateTime @default(now())
+
+  tokens ApiToken[]
+  audits Audit[]
+}
+
+model ApiToken {
+  id         String    @id @default(cuid())
+  userId     String
+  name       String
+  tokenHash  String    @unique
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
