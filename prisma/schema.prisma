@@ -1,0 +1,63 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model McpServer {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String
+  githubUrl   String?
+  npmPackage  String?
+  author      String?
+  transport   String   @default("stdio")
+  category    String   @default("other")
+  stars       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  audits   Audit[]
+  tools    ToolManifest[]
+}
+
+model Audit {
+  id          String   @id @default(cuid())
+  serverId    String
+  version     String   @default("0.1.0")
+  status      String   @default("clean") // clean, findings, error
+  exitCode    Int      @default(0)
+  manifestHash String?
+  auditLog    String?  @default("")
+  createdAt   DateTime @default(now())
+
+  server   McpServer  @relation(fields: [serverId], references: [id])
+  findings Finding[]
+}
+
+model Finding {
+  id          String   @id @default(cuid())
+  auditId     String
+  type        String   // network_egress, sensitive_file_read, rug_pull
+  severity    String   @default("high") // info, high
+  description String
+  detail      String?  @default("")
+  toolName    String?
+  createdAt   DateTime @default(now())
+
+  audit Audit @relation(fields: [auditId], references: [id])
+}
+
+model ToolManifest {
+  id          String   @id @default(cuid())
+  serverId    String
+  name        String
+  description String
+  inputSchema String?  @default("{}")
+  createdAt   DateTime @default(now())
+
+  server McpServer @relation(fields: [serverId], references: [id])
+}
